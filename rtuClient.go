@@ -5,6 +5,8 @@ import (
 	"io"
 	"log"
 	"time"
+	"strings"
+	"fmt"
 )
 
 var _ ClientProvider = (*RTUClientProvider)(nil)
@@ -53,21 +55,60 @@ func (sf *RTUClientProvider) ReadRawFrame() (aduResponse []byte, err error) {
 		log.Printf(err.Error())
 		return nil, err
 	}
-	head := make([]byte, 10)
-	size, err := io.ReadAtLeast(sf.port, head, 10)
-	if err != nil || size != 10 {
-		return nil, err
+	//head := make([]byte, 14)
+	//size, err := io.ReadAtLeast(sf.port, head, 14)
+	//if err != nil || size != 10 {
+	//	return nil, err
+	//}
+	////数据域+2
+	//expLen := head[9] + 2
+	//playLoad := make([]byte, expLen)
+	//if _, err := io.ReadAtLeast(sf.port, playLoad, int(expLen)); err != nil {
+	//	return nil, err
+	//}
+	////拆包器重新实现
+	//content := append(head, playLoad...)
+
+
+	// 延时在 20ms <= Td <= 500ms
+	// 读取报文
+	// 1. 先读取 14 个字节 	fefefefe 68 190002031122 68 91 84
+	var data [1024]byte
+	var n int
+	var n1 int
+
+	n, err = ReadAtLeast(sf.port, data[:], 14, 500*time.Millisecond)
+	if err != nil {
+		return
 	}
-	//数据域+2
-	expLen := head[9] + 2
-	playLoad := make([]byte, expLen)
-	if _, err := io.ReadAtLeast(sf.port, playLoad, int(expLen)); err != nil {
-		return nil, err
+	// 帧起始符长度
+	frontLen := 0
+	for _, b := range data {
+		if b == 0xfe {
+			frontLen++
+		} else {
+			break
+		}
 	}
-	//拆包器重新实现
-	content := append(head, playLoad...)
-	sf.Debugf("rec <==[% x]", append(fe, content...))
-	return content, nil
+	L := int(data[frontLen+9]) // 数据域长度
+	// 总字节数
+	bytesToRead := frontLen + 1 + 6 + 1 + 1 + 1 + L + 1 + 1
+	// 读取剩余字节
+	if n < bytesToRead {
+		if bytesToRead > n {
+			n1, err = io.ReadFull(sf.port, data[n:bytesToRead])
+			n += n1
+		}
+	}
+	a := fmt.Sprintf("%x", data[:4])
+	if strings.ToUpper(a) == "FEFEFEFE"{
+
+		aduResponse = data[4:n]
+	}else {
+		aduResponse = data[:n]
+	}
+	sf.Debugf("rec <==[% x]", append(fe, aduResponse...))
+	return aduResponse, nil
 }
 func (sf *RTUClientProvider) SendRawFrameAndRead(aduRequest []byte) (aduResponse []byte, err error) {
 	sf.mu.Lock()
