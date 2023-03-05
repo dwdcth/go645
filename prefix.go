@@ -6,6 +6,7 @@ import (
 )
 
 var _ PrefixHandler = (*DefaultPrefix)(nil)
+var _prefix = []byte{0xfe, 0xfe, 0xfe, 0xfe}
 
 type PrefixHandler interface {
 	EncodePrefix(buffer *bytes.Buffer) error
@@ -17,10 +18,23 @@ type DefaultPrefix struct {
 }
 
 func (d DefaultPrefix) EncodePrefix(buffer *bytes.Buffer) error {
-
+	// 写入引导词
+	buffer.Write(_prefix)
 	return nil
 }
 
 func (d DefaultPrefix) DecodePrefix(reader io.Reader) ([]byte, bool, error) {
-	return nil, true, nil
+	fe := make([]byte, 4)
+	_, err := io.ReadAtLeast(reader, fe, 4)
+	if err != nil {
+		return nil, false, err
+	}
+	isPrefix := true
+	for i := 0; i < len(fe); i++ {
+		if fe[i] != _prefix[i] {
+			isPrefix = false
+			break
+		}
+	}
+	return fe, isPrefix, nil
 }
