@@ -5,8 +5,6 @@ import (
 	"io"
 	"log"
 	"time"
-	"strings"
-	"fmt"
 )
 
 var _ ClientProvider = (*RTUClientProvider)(nil)
@@ -21,7 +19,7 @@ func (sf *RTUClientProvider) setPrefixHandler(handler PrefixHandler) {
 	sf.PrefixHandler = handler
 }
 
-//SendAndRead 发送数据并读取返回值
+// SendAndRead 发送数据并读取返回值
 func (sf *RTUClientProvider) SendAndRead(p *Protocol) (aduResponse []byte, err error) {
 	bf := bytes.NewBuffer(make([]byte, 0))
 	err = sf.EncodePrefix(bf)
@@ -48,67 +46,36 @@ func (sf *RTUClientProvider) Send(p *Protocol) (err error) {
 	return sf.SendRawFrame(bf.Bytes())
 }
 
-//ReadRawFrame 读取返回数据
+// ReadRawFrame 读取返回数据
 func (sf *RTUClientProvider) ReadRawFrame() (aduResponse []byte, err error) {
-	fe, err := sf.DecodePrefix(sf.port)
+	fe, isPrefix, err := sf.DecodePrefix(sf.port)
 	if err != nil {
 		log.Printf(err.Error())
 		return nil, err
 	}
-	//head := make([]byte, 14)
-	//size, err := io.ReadAtLeast(sf.port, head, 14)
-	//if err != nil || size != 10 {
-	//	return nil, err
-	//}
-	////数据域+2
-	//expLen := head[9] + 2
-	//playLoad := make([]byte, expLen)
-	//if _, err := io.ReadAtLeast(sf.port, playLoad, int(expLen)); err != nil {
-	//	return nil, err
-	//}
-	////拆包器重新实现
-	//content := append(head, playLoad...)
-
-
-	// 延时在 20ms <= Td <= 500ms
-	// 读取报文
-	// 1. 先读取 14 个字节 	fefefefe 68 190002031122 68 91 84
-	var data [1024]byte
-	var n int
-	var n1 int
-
-	n, err = ReadAtLeast(sf.port, data[:], 14, 500*time.Millisecond)
-	if err != nil {
-		return
+	//68(起始)+6位表号+68(起始)+91(控制码)+(数据长度) = 10
+	headLen := 10
+	if !isPrefix {
+		headLen = headLen - len(fe)
 	}
-	// 帧起始符长度
-	frontLen := 0
-	for _, b := range data {
-		if b == 0xfe {
-			frontLen++
-		} else {
-			break
-		}
+	head := make([]byte, headLen)
+	size, err := io.ReadAtLeast(sf.port, head, headLen)
+	if err != nil || size != headLen {
+		return nil, err
 	}
-	L := int(data[frontLen+9]) // 数据域长度
-	// 总字节数
-	bytesToRead := frontLen + 1 + 6 + 1 + 1 + 1 + L + 1 + 1
-	// 读取剩余字节
-	if n < bytesToRead {
-		if bytesToRead > n {
-			n1, err = io.ReadFull(sf.port, data[n:bytesToRead])
-			n += n1
-		}
+	if !isPrefix {
+		head = append(fe, head...)
 	}
-	a := fmt.Sprintf("%x", data[:4])
-	if strings.ToUpper(a) == "FEFEFEFE"{
-
-		aduResponse = data[4:n]
-	}else {
-		aduResponse = data[:n]
+	//数据域+2
+	expLen := head[9] + 2
+	playLoad := make([]byte, expLen)
+	if _, err := io.ReadAtLeast(sf.port, playLoad, int(expLen)); err != nil {
+		return nil, err
 	}
-	sf.Debugf("rec <==[% x]", append(fe, aduResponse...))
-	return aduResponse, nil
+	//拆包器重新实现
+	content := append(head, playLoad...)
+	sf.Debugf("rec <==[% x]", append(fe, content...))
+	return content, nil
 }
 func (sf *RTUClientProvider) SendRawFrameAndRead(aduRequest []byte) (aduResponse []byte, err error) {
 	sf.mu.Lock()
