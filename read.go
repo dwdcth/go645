@@ -22,6 +22,7 @@ type (
 		bcdValue string
 		rawValue []byte
 		Negative bool
+		ver      ProtoVersion
 	}
 	//WriteData 写数据
 	WriteData struct {
@@ -328,31 +329,38 @@ func (d ReadData) Encode(buffer *bytes.Buffer) error {
 }
 
 func (d ReadData) GetLen() byte {
-	if d.bcdValue == "" {
-		return 4
+	initLen := byte(0)
+	switch d.ver {
+	case Ver2007:
+		initLen = 4
+	case Ver1997:
+		initLen = 2
 	}
-	return 4 + byte(len(Number2bcd(d.bcdValue)))
+	if d.bcdValue == "" {
+		return initLen
+	}
+	return initLen + byte(len(Number2bcd(d.bcdValue)))
 }
 
-//ReadRequest 读数据
-func ReadRequest(address Address, itemCode int32) *Protocol {
+// ReadRequest 读数据
+func ReadRequest(address Address, itemCode int32, ver ProtoVersion) *Protocol {
 	c := NewControl()
-	c.SetState(Read)
-	d := NewReadData(itemCode, "")
+	c.SetState(ver, Read)
+	d := NewReadData(itemCode, "", ver)
 	return NewProtocol(address, d, c)
 
 }
 
-//ReadRequestWithBlock 读数据
-func ReadRequestWithBlock(address Address, data ReadRequestData) *Protocol {
+// ReadRequestWithBlock 读数据
+func ReadRequestWithBlock(address Address, data ReadRequestData, ver ProtoVersion) *Protocol {
 	c := NewControl()
-	c.SetState(Read)
+	c.SetState(ver, Read)
 	return NewProtocol(address, data, c)
 
 }
 
-//ReadResponse 创建读响应
-func ReadResponse(address Address, itemCode int32, control *Control, rawValue string) *Protocol {
+// ReadResponse 创建读响应
+func ReadResponse(address Address, itemCode int32, control *Control, rawValue string, ver ProtoVersion) *Protocol {
 	return &Protocol{
 		Start:      Start,
 		Start2:     Start,
@@ -360,7 +368,7 @@ func ReadResponse(address Address, itemCode int32, control *Control, rawValue st
 		Address:    address,
 		Control:    control,
 		DataLength: 0x04,
-		Data:       NewReadData(itemCode, rawValue),
+		Data:       NewReadData(itemCode, rawValue, ver),
 	}
 
 }

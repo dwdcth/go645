@@ -5,6 +5,13 @@ import (
 	"time"
 )
 
+type ProtoVersion int
+
+const (
+	Ver1997 ProtoVersion = iota + 1
+	Ver2007
+)
+
 type ClientProvider interface {
 	// Connect try to connect the remote server
 	Connect() error
@@ -24,6 +31,8 @@ type ClientProvider interface {
 	SendRawFrame(aduRequest []byte) (err error)
 	ReadRawFrame() (aduResponse []byte, err error)
 	Send(*Protocol) (err error)
+	SetVersion(ver ProtoVersion)
+	GetVersion() ProtoVersion
 }
 
 // LogProvider  log message levels only Debug and Error

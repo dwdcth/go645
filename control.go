@@ -7,37 +7,42 @@ import (
 	"fmt"
 )
 
-type ControlType byte
-
-//01010
-const (
-	IsSlave  ControlType = 1 << 7
-	SlaveErr ControlType = 1 << 6
-	HasNext  ControlType = 1 << 5
-	//Retain 保留
-	Retain ControlType = 0b00000
-	//Broadcast 广播校时
-	Broadcast ControlType = 0b01000
-	// ReadNext 读后续10001
-	ReadNext ControlType = 0b10010
-	//ReadAddress 读通讯地址
-	ReadAddress ControlType = 0b10011
-	//Write 写数据
-	Write ControlType = 0b10100
-	//WriteAddress 读通讯地址
-	WriteAddress ControlType = 0b10101
-	//ToChangeCommunicationRate 更改通讯速率
-	ToChangeCommunicationRate ControlType = 0b10111
-	Freeze                    ControlType = 0b10110
-	//PassWord 修改密码
-	PassWord       ControlType = 0b11000
-	ResetMaxDemand ControlType = 0b11001
-	//ResetEM 电表清零
-	ResetEM    ControlType = 0b11010
-	ResetEvent ControlType = 0b11011
-	//Read 读
-	Read ControlType = 0b10001
+var (
+	controlVersionMap = make(map[ProtoVersion]map[ControlKind]ControlType)
 )
+
+type ControlKind int
+
+const (
+	IsSlave ControlKind = iota + 1
+	SlaveErr
+	HasNext
+	//Retain 保留
+	Retain
+	//Broadcast 广播校时
+	Broadcast
+	// ReadNext 读后续10001
+	ReadNext
+	//ReadAddress 读通讯地址
+	ReadAddress
+	//Write 写数据
+	Write
+	//WriteAddress 读通讯地址
+	WriteAddress
+	//ToChangeCommunicationRate 更改通讯速率
+	ToChangeCommunicationRate
+	Freeze
+	//PassWord 修改密码
+	PassWord
+	ResetMaxDemand
+	//ResetEM 电表清零
+	ResetEM
+	ResetEvent
+	//Read 读
+	Read
+)
+
+type ControlType byte
 
 type Control struct {
 	Data ControlType
@@ -57,24 +62,24 @@ func NewControlValue(data ControlType) *Control {
 	return &Control{Data: data}
 }
 
-func (c *Control) SetState(state ControlType) {
-	c.Data = c.Data | state
+func (c *Control) SetState(ver ProtoVersion, state ControlKind) {
+	c.Data = c.Data | controlVersionMap[ver][state]
 }
 
-//SetStates 批量设置状态
-func (c *Control) SetStates(state ...ControlType) {
+// SetStates 批量设置状态
+func (c *Control) SetStates(ver ProtoVersion, state ...ControlKind) {
 	for _, s := range state {
-		c.Data = c.Data | s
+		c.Data = c.Data | controlVersionMap[ver][s]
 	}
 }
-func (c *Control) IsState(state ControlType) bool {
-	return (c.Data & state) == state
+func (c *Control) IsState(ver ProtoVersion, state ControlKind) bool {
+	return (c.Data & controlVersionMap[ver][state]) == controlVersionMap[ver][state]
 }
 
-//IsStates 判断控制域
-func (c *Control) IsStates(state ...ControlType) bool {
+// IsStates 判断控制域
+func (c *Control) IsStates(ver ProtoVersion, state ...ControlKind) bool {
 	for _, s := range state {
-		if !c.IsState(s) {
+		if !c.IsState(ver, s) {
 			return false
 		}
 	}

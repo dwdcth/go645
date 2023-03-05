@@ -68,6 +68,7 @@ type (
 
 	//Protocol 协议
 	Protocol struct {
+		Version ProtoVersion
 		//Start 645协议起始符号
 		Start byte
 		//设备地址 6个字节的BCD
@@ -160,10 +161,13 @@ func (t YearDateTimeS) GetLen() byte {
 
 // NewAddress ，构建设备地址
 // 参数：
-//      address ： 设备地址
-//      order ： 大小端表示
+//
+//	address ： 设备地址
+//	order ： 大小端表示
+//
 // 返回值：
-//      *Address 设备地址
+//
+//	*Address 设备地址
 func NewAddress(address string, order Order) Address {
 	value := Number2bcd(address)
 	if !order {
@@ -175,8 +179,8 @@ func NewAddress(address string, order Order) Address {
 	return Address{value: value, strValue: address}
 }
 
-func NewReadData(dataType int32, value string) ReadData {
-	return ReadData{dataType: Int2bytes(dataType), bcdValue: value}
+func NewReadData(dataType int32, value string, ver ProtoVersion) ReadData {
+	return ReadData{dataType: Int2bytes(dataType, ver), bcdValue: value, ver: ver}
 }
 
 func NewProtocol(address Address, data InformationElement, control *Control) *Protocol {
@@ -193,9 +197,12 @@ func NewProtocol(address Address, data InformationElement, control *Control) *Pr
 
 // Encode ，协议解码
 // 参数：
-//      buffer ： 字节码缓冲
+//
+//	buffer ： 字节码缓冲
+//
 // 返回值：
-//      error 解码异常
+//
+//	error 解码异常
 func (a Address) Encode(buffer *bytes.Buffer) error {
 	return binary.Write(buffer, binary.BigEndian, a.value)
 }
@@ -215,7 +222,7 @@ func (a Address) GetLen() byte {
 	return 6
 }
 
-//GetHex 返回16进制string
+// GetHex 返回16进制string
 func GetHex(protocol *Protocol) (string, error) {
 	bf := bytes.NewBuffer(make([]byte, 0))
 	if err := protocol.Encode(bf); err != nil {
@@ -297,13 +304,22 @@ func Hex2Byte(str string) []byte {
 	return bHex
 }
 
-func Int2bytes(data int32) []byte {
-	var b3 = make([]byte, 4)
-	b3[0] = uint8(data)
-	b3[1] = uint8(data >> 8)
-	b3[2] = uint8(data >> 16)
-	b3[3] = uint8(data >> 24)
-	return b3
+func Int2bytes(data int32, ver ProtoVersion) []byte {
+	switch ver {
+	case Ver1997:
+		var b = make([]byte, 2)
+		b[0] = uint8(data)
+		b[1] = uint8(data >> 8)
+		return b
+	case Ver2007:
+		var b = make([]byte, 4)
+		b[0] = uint8(data)
+		b[1] = uint8(data >> 8)
+		b[2] = uint8(data >> 16)
+		b[3] = uint8(data >> 24)
+		return b
+	}
+	return nil
 }
 
 func WriteWithOffSet(buffer *bytes.Buffer, data byte) error {

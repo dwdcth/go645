@@ -9,17 +9,17 @@ import (
 
 type Decoder func(buffer *bytes.Buffer) (*InformationElement, error)
 
-func Handler(control *Control, buffer *bytes.Buffer, size byte) (InformationElement, error) {
+func Handler(control *Control, buffer *bytes.Buffer, size byte, ver ProtoVersion) (InformationElement, error) {
 	//从站响应异常响应
 	if control == nil {
 		return nil, errors.New("未知错误")
 	}
-	if control.IsState(SlaveErr) {
+	if control.IsState(ver, SlaveErr) {
 		return nil, DecodeException(buffer)
 	}
 	//从站读正确响应
-	if control.IsState(Read) {
-		return DecodeRead(buffer, int(size)), nil
+	if control.IsState(ver, Read) {
+		return DecodeRead(buffer, int(size), ver), nil
 	}
 	//佳和强制联机
 	if control.Data == 0x8a {
@@ -27,7 +27,7 @@ func Handler(control *Control, buffer *bytes.Buffer, size byte) (InformationElem
 	}
 	return nil, errors.New("未定义的数据类型")
 }
-func Decode(buffer *bytes.Buffer) (*Protocol, error) {
+func Decode(buffer *bytes.Buffer, ver ProtoVersion) (*Protocol, error) {
 	var err error
 	read := func(data interface{}) {
 		if err != nil {
@@ -41,7 +41,7 @@ func Decode(buffer *bytes.Buffer) (*Protocol, error) {
 	read(&p.Start2)
 	p.Control, err = DecodeControl(buffer)
 	read(&p.DataLength)
-	p.Data, err = Handler(p.Control, buffer, p.DataLength)
+	p.Data, err = Handler(p.Control, buffer, p.DataLength, ver)
 	read(&p.CS)
 	read(&p.End)
 	if err != nil {
@@ -112,7 +112,7 @@ func DecoderData(buffer *bytes.Buffer, size int) (*bytes.Buffer, error) {
 
 	return bytes.NewBuffer(value), nil
 }
-func DecodeRead(buffer *bytes.Buffer, size int) InformationElement {
+func DecodeRead(buffer *bytes.Buffer, size int, ver ProtoVersion) InformationElement {
 	df, _ := DecoderData(buffer, size)
 	var err error
 	read := func(data interface{}) {
@@ -122,8 +122,15 @@ func DecodeRead(buffer *bytes.Buffer, size int) InformationElement {
 		err = binary.Read(df, binary.LittleEndian, data)
 	}
 	data := new(ReadData)
-	var dataType = make([]byte, 4)
-	dataValue := make([]byte, size-4)
+	dataTypeLen := 0
+	switch ver {
+	case Ver2007:
+		dataTypeLen = 4
+	case Ver1997:
+		dataTypeLen = 2
+	}
+	var dataType = make([]byte, dataTypeLen)
+	dataValue := make([]byte, size-dataTypeLen)
 	read(&dataValue)
 	read(&dataType)
 	for i, j := 0, len(dataType)-1; i < j; i, j = i+1, j-1 {
@@ -133,16 +140,18 @@ func DecodeRead(buffer *bytes.Buffer, size int) InformationElement {
 	//表内温度 最高位0表示零上，1表示零下。取值范围：0.0～799.9
 	//电流最高位表示方向，0正,1负,取值范围：0.000～799.999。功率因数最高位表示方向，0正，1负，取值范围
 	//判断最高位是否为0
-	if dataType[3] == 0x02 && dataType[2] >= 0x3 && dataType[2] <= 0x6 {
-		if IsStateUin8(dataValue[0], 7) {
-			data.Negative = true
-			dataValue[0] = dataValue[0] << 1 >> 1
+	if ver == Ver2007 {
+		if dataType[3] == 0x02 && dataType[2] >= 0x3 && dataType[2] <= 0x6 {
+			if IsStateUin8(dataValue[0], 7) {
+				data.Negative = true
+				dataValue[0] = dataValue[0] << 1 >> 1
+			}
 		}
-	}
-	if dataType[3] == 02 && dataType[2] == 0x80 && dataType[0] >= 0x4 && dataType[0] <= 0x7 {
-		if IsStateUin8(dataValue[0], 7) {
-			data.Negative = true
-			dataValue[0] = dataValue[0] << 1 >> 1
+		if dataType[3] == 02 && dataType[2] == 0x80 && dataType[0] >= 0x4 && dataType[0] <= 0x7 {
+			if IsStateUin8(dataValue[0], 7) {
+				data.Negative = true
+				dataValue[0] = dataValue[0] << 1 >> 1
+			}
 		}
 	}
 

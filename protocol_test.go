@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-//TestRead 测试上报请求
+// TestRead 测试上报请求
 func TestDecode(t *testing.T) {
 	str := "681401003182216891083333343339333333f116"
 	decodeString, err := hex.DecodeString(str)
@@ -33,7 +33,7 @@ func TestDecode(t *testing.T) {
 
 }
 
-//TestRead 测试解析读请求
+// TestRead 测试解析读请求
 func TestRead(t *testing.T) {
 	str := "6881040007213a68910733353535333333ba16"
 	data := make([]byte, 0)
@@ -49,7 +49,7 @@ func TestRead(t *testing.T) {
 	fmt.Printf("%f", p2.Data.(*ReadData).GetFloat64Value())
 }
 
-//TestSend 测试发送
+// TestSend 测试发送
 func TestSend(t *testing.T) {
 	str := "68610100000000681104333334331416"
 	data := make([]byte, 0)
@@ -131,7 +131,7 @@ func (c *Control) TestErr(buffer *bytes.Buffer) error {
 	return nil
 }
 func TestReadResponse(t *testing.T) {
-	rp := ReadResponse(NewAddress("610100000000", LittleEndian), 0x00_01_00_00, NewControl(), "200")
+	rp := ReadResponse(NewAddress("610100000000", LittleEndian), 0x00_01_00_00, NewControl(), "200", Ver2007)
 
 	if rp.Address.GetStrAddress(LittleEndian) != "610100000000" {
 		t.Errorf("地址错误")

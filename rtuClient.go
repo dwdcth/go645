@@ -13,10 +13,19 @@ type RTUClientProvider struct {
 	serialPort
 	logger
 	PrefixHandler
+	version ProtoVersion
 }
 
 func (sf *RTUClientProvider) setPrefixHandler(handler PrefixHandler) {
 	sf.PrefixHandler = handler
+}
+
+func (sf *RTUClientProvider) SetVersion(ver ProtoVersion) {
+	sf.version = ver
+}
+
+func (sf *RTUClientProvider) GetVersion() ProtoVersion {
+	return sf.version
 }
 
 // SendAndRead 发送数据并读取返回值
@@ -53,7 +62,7 @@ func (sf *RTUClientProvider) ReadRawFrame() (aduResponse []byte, err error) {
 		log.Printf(err.Error())
 		return nil, err
 	}
-	//68(起始)+6位表号+68(起始)+91(控制码)+(数据长度) = 10
+	//68(起始)+6位表号+68(起始)+(控制码)+(数据长度) = 10
 	headLen := 10
 	if !isPrefix {
 		headLen = headLen - len(fe)
@@ -66,7 +75,7 @@ func (sf *RTUClientProvider) ReadRawFrame() (aduResponse []byte, err error) {
 	if !isPrefix {
 		head = append(fe, head...)
 	}
-	//数据域+2
+	//数据域+2(校验位+结束符16)
 	expLen := head[9] + 2
 	playLoad := make([]byte, expLen)
 	if _, err := io.ReadAtLeast(sf.port, playLoad, int(expLen)); err != nil {
@@ -111,6 +120,9 @@ func NewRTUClientProvider(opts ...ClientProviderOption) *RTUClientProvider {
 	}
 	for _, opt := range opts {
 		opt(p)
+	}
+	if p.version == 0 {
+		p.version = Ver2007
 	}
 	return p
 }

@@ -16,18 +16,18 @@ type client struct {
 }
 
 func (c *client) Read(address Address, itemCode int32) (*ReadData, bool, error) {
-	resp, err := c.ClientProvider.SendAndRead(ReadRequest(address, itemCode))
+	resp, err := c.ClientProvider.SendAndRead(ReadRequest(address, itemCode, c.GetVersion()))
 	if err != nil {
 		return nil, false, err
 	}
-	decode, err := Decode(bytes.NewBuffer(resp))
+	decode, err := Decode(bytes.NewBuffer(resp), c.GetVersion())
 	if err != nil {
 		return nil, false, err
 	}
-	return decode.Data.(*ReadData), decode.Control.IsState(HasNext), err
+	return decode.Data.(*ReadData), decode.Control.IsState(c.GetVersion(), HasNext), err
 }
 
-//Broadcast 设备广播
+// Broadcast 设备广播
 func (c *client) Broadcast(p InformationElement, control Control) error {
 	var err error
 	bf := bytes.NewBuffer(make([]byte, 0))
@@ -39,11 +39,11 @@ func (c *client) Broadcast(p InformationElement, control Control) error {
 }
 
 func (c *client) ReadWithBlock(address Address, data ReadRequestData) (*Protocol, error) {
-	resp, err := c.ClientProvider.SendAndRead(ReadRequestWithBlock(address, data))
+	resp, err := c.ClientProvider.SendAndRead(ReadRequestWithBlock(address, data, c.GetVersion()))
 	if err != nil {
 		return nil, err
 	}
-	return Decode(bytes.NewBuffer(resp))
+	return Decode(bytes.NewBuffer(resp), c.GetVersion())
 }
 
 // Option custom option
