@@ -42,9 +42,3 @@ func WithTCPTimeout(t time.Duration) ClientProviderOption {
 		p.setTCPTimeout(t)
 	}
 }
-
-func WithProtoVersion(ver ProtoVersion) ClientProviderOption {
-	return func(p ClientProvider) {
-		p.SetVersion(ver)
-	}
-}

@@ -31,8 +31,6 @@ type ClientProvider interface {
 	SendRawFrame(aduRequest []byte) (err error)
 	ReadRawFrame() (aduResponse []byte, err error)
 	Send(*Protocol) (err error)
-	SetVersion(ver ProtoVersion)
-	GetVersion() ProtoVersion
 }
 
 // LogProvider  log message levels only Debug and Error

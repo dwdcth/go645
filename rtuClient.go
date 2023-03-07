@@ -13,19 +13,10 @@ type RTUClientProvider struct {
 	serialPort
 	logger
 	PrefixHandler
-	version ProtoVersion
 }
 
 func (sf *RTUClientProvider) setPrefixHandler(handler PrefixHandler) {
 	sf.PrefixHandler = handler
-}
-
-func (sf *RTUClientProvider) SetVersion(ver ProtoVersion) {
-	sf.version = ver
-}
-
-func (sf *RTUClientProvider) GetVersion() ProtoVersion {
-	return sf.version
 }
 
 // SendAndRead 发送数据并读取返回值
@@ -120,9 +111,6 @@ func NewRTUClientProvider(opts ...ClientProviderOption) *RTUClientProvider {
 	}
 	for _, opt := range opts {
 		opt(p)
-	}
-	if p.version == 0 {
-		p.version = Ver2007
 	}
 	return p
 }
