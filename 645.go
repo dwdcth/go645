@@ -12,6 +12,10 @@ const (
 	Ver2007
 )
 
+type LogSaver interface {
+	Write(url string, station string, data []byte)
+}
+
 type ClientProvider interface {
 	// Connect try to connect the remote server
 	Connect() error
@@ -26,9 +30,10 @@ type ClientProvider interface {
 	// setTCPTimeout set tcp connect & read timeout
 	setTCPTimeout(t time.Duration)
 	setLogProvider(p LogProvider)
+	setLogSaver(l LogSaver)
 	SendAndRead(*Protocol) (aduResponse []byte, err error)
-	SendRawFrameAndRead(aduRequest []byte) (aduResponse []byte, err error)
-	SendRawFrame(aduRequest []byte) (err error)
+	SendRawFrameAndRead(station string, aduRequest []byte) (aduResponse []byte, err error)
+	SendRawFrame(station string, aduRequest []byte) (err error)
 	ReadRawFrame() (aduResponse []byte, err error)
 	Send(*Protocol) (err error)
 }

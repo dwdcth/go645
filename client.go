@@ -15,12 +15,12 @@ type client struct {
 	mu sync.Mutex
 }
 
-func (c *client) Read(address Address, itemCode int32, ver ProtoVersion) (*ReadData, bool, error) {
-	resp, err := c.ClientProvider.SendAndRead(ReadRequest(address, itemCode, ver))
+func (c *client) Read(ver ProtoVersion, address Address, itemCode int32) (*ReadData, bool, error) {
+	resp, err := c.ClientProvider.SendAndRead(ReadRequest(ver, address, itemCode))
 	if err != nil {
 		return nil, false, err
 	}
-	decode, err := Decode(bytes.NewBuffer(resp), ver)
+	decode, err := Decode(ver, bytes.NewBuffer(resp))
 	if err != nil {
 		return nil, false, err
 	}
@@ -28,7 +28,7 @@ func (c *client) Read(address Address, itemCode int32, ver ProtoVersion) (*ReadD
 }
 
 // Broadcast 设备广播 todo 版本号
-func (c *client) Broadcast(p InformationElement, control Control, ver ProtoVersion) error {
+func (c *client) Broadcast(ver ProtoVersion, p InformationElement, control Control) error {
 	var err error
 	bf := bytes.NewBuffer(make([]byte, 0))
 	err = p.Encode(bf)
@@ -38,12 +38,12 @@ func (c *client) Broadcast(p InformationElement, control Control, ver ProtoVersi
 	return c.Send(NewProtocol(NewAddress(BroadcastAddress, LittleEndian), p, &control))
 }
 
-func (c *client) ReadWithBlock(address Address, data ReadRequestData, ver ProtoVersion) (*Protocol, error) {
-	resp, err := c.ClientProvider.SendAndRead(ReadRequestWithBlock(address, data, ver))
+func (c *client) ReadWithBlock(ver ProtoVersion, address Address, data ReadRequestData) (*Protocol, error) {
+	resp, err := c.ClientProvider.SendAndRead(ReadRequestWithBlock(ver, address, data))
 	if err != nil {
 		return nil, err
 	}
-	return Decode(bytes.NewBuffer(resp), ver)
+	return Decode(ver, bytes.NewBuffer(resp))
 }
 
 // Option custom option

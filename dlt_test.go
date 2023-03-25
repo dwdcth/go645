@@ -107,6 +107,13 @@ var item = []int32{
 	0x0206_0000, 0xB6_50, //总功率因数
 }
 
+type MyLog struct {
+}
+
+func (m MyLog) Write(address string, station string, data []byte) {
+	fmt.Println(address, station, data)
+}
+
 func read2007() {
 	p2 := NewRTUClientProvider(
 		WithSerialConfig(serial.Config{
@@ -117,6 +124,7 @@ func read2007() {
 			Parity:   "E",
 			Timeout:  time.Second * 30}),
 		WithEnableLogger(),
+		WithLogSaver(MyLog{}),
 	)
 	//c1 := NewClient(p1)
 	c2 := NewClient(p2)
@@ -133,7 +141,7 @@ func read2007() {
 		//	println(pr.GetValue())
 		//}
 		//time.Sleep(500 * time.Millisecond)
-		pr, _, err := c2.Read(NewAddress("000000000001", LittleEndian), item[i], Ver2007) //a 相电压
+		pr, _, err := c2.Read(Ver2007, NewAddress("000000000001", LittleEndian), item[i]) //a 相电压
 		if err != nil {
 			log.Print(err.Error())
 		} else {
@@ -171,7 +179,7 @@ func read1997() {
 		//	println(pr.GetValue())
 		//}
 		//time.Sleep(500 * time.Millisecond)
-		pr, _, err := c2.Read(NewAddress("000000000001", LittleEndian), item[i+1], Ver1997) //a 相电压
+		pr, _, err := c2.Read(Ver2007, NewAddress("000000000001", LittleEndian), item[i+1]) //a 相电压
 		if err != nil {
 			log.Print(err.Error())
 		} else {

@@ -16,14 +16,14 @@ func TestDecode(t *testing.T) {
 	if err != nil {
 		return
 	}
-	p, _ := Decode(bytes.NewBuffer(decodeString))
+	p, _ := Decode(Ver2007, bytes.NewBuffer(decodeString))
 	if p.Address.strValue != "140100318221" {
 		t.Errorf("地址解析错误")
 	}
 	if p.Address.GetLen() != 6 {
 		t.Errorf("长度错误")
 	}
-	if !p.Control.IsState(IsSlave) || !p.Control.IsState(Read) {
+	if !p.Control.IsState(Ver2007, IsSlave) || !p.Control.IsState(Ver2007, Read) {
 		t.Errorf("状态解析错误")
 	}
 	fmt.Printf("%f \n", p.Data.(*ReadData).GetFloat64Value())
@@ -38,12 +38,12 @@ func TestRead(t *testing.T) {
 	str := "6881040007213a68910733353535333333ba16"
 	data := make([]byte, 0)
 	c := NewControl()
-	c.SetState(Read)
-	r := ReadRequest(NewAddress("610100000000", BigEndian), 0x00_01_00_00)
+	c.SetState(Ver2007, Read)
+	r := ReadRequest(Ver2007, NewAddress("610100000000", BigEndian), 0x00_01_00_00)
 	bf := bytes.NewBuffer(data)
 	_ = r.Encode(bf)
 	decodeString, _ := hex.DecodeString(str)
-	p2, _ := Decode(bytes.NewBuffer(decodeString))
+	p2, _ := Decode(Ver2007, bytes.NewBuffer(decodeString))
 	print(p2.Data.(*ReadData).GetValue() + "\n")
 	print(p2.Data.(*ReadData).GetDataTypeStr() + "\n")
 	fmt.Printf("%f", p2.Data.(*ReadData).GetFloat64Value())
@@ -54,13 +54,13 @@ func TestSend(t *testing.T) {
 	str := "68610100000000681104333334331416"
 	data := make([]byte, 0)
 	c := NewControl()
-	c.SetState(Read)
-	r := ReadRequest(NewAddress("610100000000", BigEndian), 0x00_01_00_00)
+	c.SetState(Ver2007, Read)
+	r := ReadRequest(Ver2007, NewAddress("610100000000", BigEndian), 0x00_01_00_00)
 	bf := bytes.NewBuffer(data)
 	_ = r.Encode(bf)
-	p, _ := Decode(bf)
+	p, _ := Decode(Ver2007, bf)
 	decodeString, _ := hex.DecodeString(str)
-	p2, _ := Decode(bytes.NewBuffer(decodeString))
+	p2, _ := Decode(Ver2007, bytes.NewBuffer(decodeString))
 	print(p.Data.(*ReadData).GetValue())
 	AssertEquest("地址错误", p2.Address.strValue, p.Address.strValue, t)
 	AssertEquest("校验码错误", p.CS, p2.CS, t)
@@ -70,13 +70,13 @@ func TestLEnd(t *testing.T) {
 	str := "68610100000000681104333334331416"
 	data := make([]byte, 0)
 	c := NewControl()
-	c.SetState(Read)
-	r := ReadRequest(NewAddress("610100000000", LittleEndian), 0x00_01_00_00)
+	c.SetState(Ver2007, Read)
+	r := ReadRequest(Ver2007, NewAddress("610100000000", LittleEndian), 0x00_01_00_00)
 	bf := bytes.NewBuffer(data)
 	_ = r.Encode(bf)
-	p, _ := Decode(bf)
+	p, _ := Decode(Ver2007, bf)
 	decodeString, _ := hex.DecodeString(str)
-	p2, _ := Decode(bytes.NewBuffer(decodeString))
+	p2, _ := Decode(Ver2007, bytes.NewBuffer(decodeString))
 	AssertEquest("地址错误", p2.Address.GetStrAddress(LittleEndian), "000000000161", t)
 	AssertEquest("地址错误", p2.Address.GetStrAddress(BigEndian), "610100000000", t)
 	AssertEquest("校验码错误", p.CS, p2.CS, t)
@@ -95,9 +95,9 @@ func AssertState(assert func() bool, t *testing.T) {
 }
 func TestControl_IsState(t *testing.T) {
 	d := NewControlValue(0x0A)
-	println(d.IsStates(IsSlave))
-	println(d.IsStates(Broadcast))
-	println(d.IsStates(Read))
+	println(d.IsStates(Ver2007, IsSlave))
+	println(d.IsStates(Ver2007, Broadcast))
+	println(d.IsStates(Ver2007, Read))
 
 }
 func TestControl(t *testing.T) {
@@ -105,23 +105,23 @@ func TestControl(t *testing.T) {
 	if c.getLen() != 1 {
 		t.Errorf("长度错误")
 	}
-	c.SetState(SlaveErr)
-	if !c.IsState(SlaveErr) {
+	c.SetState(Ver2007, SlaveErr)
+	if !c.IsState(Ver2007, SlaveErr) {
 		t.Errorf("设置错误")
 	}
 	c.Reset()
-	if c.IsState(SlaveErr) {
+	if c.IsState(Ver2007, SlaveErr) {
 		t.Errorf("复归错误")
 	}
-	c.SetStates(SlaveErr, IsSlave, HasNext, Retain, Broadcast, ReadNext, ReadAddress)
-	if !c.IsStates(SlaveErr, IsSlave) {
+	c.SetStates(Ver2007, SlaveErr, IsSlave, HasNext, Retain, Broadcast, ReadNext, ReadAddress)
+	if !c.IsStates(Ver2007, SlaveErr, IsSlave) {
 		t.Errorf("设置错误")
 	}
 }
 func (c *Control) TestErr(buffer *bytes.Buffer) error {
 
 	var bf *bytes.Buffer
-	r := ReadRequest(NewAddress("610100000000", LittleEndian), 0x00_01_00_00)
+	r := ReadRequest(Ver2007, NewAddress("610100000000", LittleEndian), 0x00_01_00_00)
 	_ = r.Encode(bf)
 
 	if err := binary.Write(buffer, binary.BigEndian, c.Data); err != nil {
@@ -131,7 +131,7 @@ func (c *Control) TestErr(buffer *bytes.Buffer) error {
 	return nil
 }
 func TestReadResponse(t *testing.T) {
-	rp := ReadResponse(NewAddress("610100000000", LittleEndian), 0x00_01_00_00, NewControl(), "200", Ver2007)
+	rp := ReadResponse(Ver2007, NewAddress("610100000000", LittleEndian), 0x00_01_00_00, NewControl(), "200")
 
 	if rp.Address.GetStrAddress(LittleEndian) != "610100000000" {
 		t.Errorf("地址错误")

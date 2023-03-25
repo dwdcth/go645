@@ -13,6 +13,11 @@ type RTUClientProvider struct {
 	serialPort
 	logger
 	PrefixHandler
+	logSaver LogSaver
+}
+
+func (sf *RTUClientProvider) setLogSaver(l LogSaver) {
+	sf.logSaver = l
 }
 
 func (sf *RTUClientProvider) setPrefixHandler(handler PrefixHandler) {
@@ -31,7 +36,7 @@ func (sf *RTUClientProvider) SendAndRead(p *Protocol) (aduResponse []byte, err e
 	if err != nil {
 		return nil, err
 	}
-	return sf.SendRawFrameAndRead(bf.Bytes())
+	return sf.SendRawFrameAndRead(p.Address.strValue, bf.Bytes())
 }
 func (sf *RTUClientProvider) Send(p *Protocol) (err error) {
 	bf := bytes.NewBuffer(make([]byte, 0))
@@ -43,7 +48,7 @@ func (sf *RTUClientProvider) Send(p *Protocol) (err error) {
 	if err != nil {
 		return err
 	}
-	return sf.SendRawFrame(bf.Bytes())
+	return sf.SendRawFrame(p.Address.strValue, bf.Bytes())
 }
 
 // ReadRawFrame 读取返回数据
@@ -77,13 +82,13 @@ func (sf *RTUClientProvider) ReadRawFrame() (aduResponse []byte, err error) {
 	sf.Debugf("rec <==[% x]", append(fe, content...))
 	return content, nil
 }
-func (sf *RTUClientProvider) SendRawFrameAndRead(aduRequest []byte) (aduResponse []byte, err error) {
+func (sf *RTUClientProvider) SendRawFrameAndRead(station string, aduRequest []byte) (aduResponse []byte, err error) {
 	sf.mu.Lock()
 	defer sf.mu.Unlock()
 	if err = sf.connect(); err != nil {
 		return
 	}
-	err = sf.SendRawFrame(aduRequest)
+	err = sf.SendRawFrame(station, aduRequest)
 	if err != nil {
 		log.Printf(err.Error())
 		_ = sf.close()
@@ -91,13 +96,16 @@ func (sf *RTUClientProvider) SendRawFrameAndRead(aduRequest []byte) (aduResponse
 	}
 	return sf.ReadRawFrame()
 }
-func (sf *RTUClientProvider) SendRawFrame(aduRequest []byte) (err error) {
+func (sf *RTUClientProvider) SendRawFrame(station string, aduRequest []byte) (err error) {
 	if err = sf.connect(); err != nil {
 		return
 	}
 	// Send the request
 	sf.Debugf("sending ==> [% x]", aduRequest)
 	//发送数据
+	if sf.logSaver != nil {
+		sf.logSaver.Write(sf.Address, station, aduRequest)
+	}
 	_, err = sf.port.Write(aduRequest)
 	return err
 }

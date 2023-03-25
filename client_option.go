@@ -16,6 +16,12 @@ func WithLogProvider(provider LogProvider) ClientProviderOption {
 	}
 }
 
+func WithLogSaver(l LogSaver) ClientProviderOption {
+	return func(p ClientProvider) {
+		p.setLogSaver(l)
+	}
+}
+
 // WithEnableLogger enable log output when you has set logger.
 func WithEnableLogger() ClientProviderOption {
 	return func(p ClientProvider) {

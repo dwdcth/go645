@@ -27,7 +27,7 @@ func Handler(control *Control, buffer *bytes.Buffer, size byte, ver ProtoVersion
 	}
 	return nil, errors.New("未定义的数据类型")
 }
-func Decode(buffer *bytes.Buffer, ver ProtoVersion) (*Protocol, error) {
+func Decode(ver ProtoVersion, buffer *bytes.Buffer) (*Protocol, error) {
 	var err error
 	read := func(data interface{}) {
 		if err != nil {

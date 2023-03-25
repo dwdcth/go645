@@ -343,7 +343,7 @@ func (d ReadData) GetLen() byte {
 }
 
 // ReadRequest 读数据
-func ReadRequest(address Address, itemCode int32, ver ProtoVersion) *Protocol {
+func ReadRequest(ver ProtoVersion, address Address, itemCode int32) *Protocol {
 	c := NewControl()
 	c.SetState(ver, Read)
 	d := NewReadData(itemCode, "", ver)
@@ -352,7 +352,7 @@ func ReadRequest(address Address, itemCode int32, ver ProtoVersion) *Protocol {
 }
 
 // ReadRequestWithBlock 读数据
-func ReadRequestWithBlock(address Address, data ReadRequestData, ver ProtoVersion) *Protocol {
+func ReadRequestWithBlock(ver ProtoVersion, address Address, data ReadRequestData) *Protocol {
 	c := NewControl()
 	c.SetState(ver, Read)
 	return NewProtocol(address, data, c)
@@ -360,7 +360,7 @@ func ReadRequestWithBlock(address Address, data ReadRequestData, ver ProtoVersio
 }
 
 // ReadResponse 创建读响应
-func ReadResponse(address Address, itemCode int32, control *Control, rawValue string, ver ProtoVersion) *Protocol {
+func ReadResponse(ver ProtoVersion, address Address, itemCode int32, control *Control, rawValue string) *Protocol {
 	return &Protocol{
 		Start:      Start,
 		Start2:     Start,
