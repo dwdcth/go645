@@ -110,8 +110,8 @@ var item = []int32{
 type MyLog struct {
 }
 
-func (m MyLog) Write(address string, station string, data []byte) {
-	fmt.Println(address, station, data)
+func (m MyLog) Write(dir int, address string, station string, data []byte) {
+	fmt.Printf("%d %s %s [% x]\n", dir, address, station, data)
 }
 
 func read2007() {

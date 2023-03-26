@@ -79,6 +79,12 @@ func (sf *RTUClientProvider) ReadRawFrame() (aduResponse []byte, err error) {
 	}
 	//拆包器重新实现
 	content := append(head, playLoad...)
+	if sf.logSaver != nil {
+		addrByte := content[1:7]
+		reverse(addrByte)
+		addr, _ := DecodeAddress(bytes.NewBuffer(addrByte), 6)
+		sf.logSaver.Write(DirRx, sf.Address, addr.strValue, append(fe, content...))
+	}
 	sf.Debugf("rec <==[% x]", append(fe, content...))
 	return content, nil
 }
@@ -104,7 +110,7 @@ func (sf *RTUClientProvider) SendRawFrame(station string, aduRequest []byte) (er
 	sf.Debugf("sending ==> [% x]", aduRequest)
 	//发送数据
 	if sf.logSaver != nil {
-		sf.logSaver.Write(sf.Address, station, aduRequest)
+		sf.logSaver.Write(DirTx, sf.Address, station, aduRequest)
 	}
 	_, err = sf.port.Write(aduRequest)
 	return err

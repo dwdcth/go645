@@ -12,8 +12,13 @@ const (
 	Ver2007
 )
 
+const (
+	DirTx = iota + 1
+	DirRx
+)
+
 type LogSaver interface {
-	Write(url string, station string, data []byte)
+	Write(dir int, url string, station string, data []byte)
 }
 
 type ClientProvider interface {
